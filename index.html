@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+    <meta charset="UTF-8">
+    <title>博士达合金成分配比计算器</title>
+    <script src="index.js"></script>
+    <link href="index.css" rel="stylesheet" type="text/css">
+</head>
+<body>
+<table id="mainTable" class="m-auto hide">
+    <tr>
+        <td colspan="2"><h3 class="m-b-0">配料设置</h3></td>
+    </tr>
+    <tr>
+        <td>锡锭原材料：</td>
+        <td><input name="SnElement" onblur="saveInput(this)" type="number"/> kg</td>
+    </tr>
+    <tr id="elementTr">
+        <td>成品规格：</td>
+        <td>
+            <select id="selectAlloy" onchange="saveInput(this);showPercents(this);">
+                <option value="">请选择</option>
+                <option value="SAC305">SAC305</option>
+            </select>
+        </td>
+    </tr>
+    <tr>
+        <td>其他元素占比：</td>
+        <td>
+            <input name="OtherElement" onblur="saveInput(this)" type="number"/> %
+        </td>
+    </tr>
+    <tr>
+        <td colspan="2">
+            <input type="button" value="保存规格" onclick="saveAlloy();">
+            <input class="m-l-20" type="button" value="删除规格" onclick="deleteAlloy();">
+            <input class="m-l-20" type="button" value="计算配比" onclick="calculate()">
+        </td>
+    </tr>
+    <tr id="alloyTr">
+        <td colspan="2"><h3 class="m-b-0">锡包合金设置</h3></td>
+    </tr>
+</table>
+<!--<iframe id="iframe" style="width: 100%;" frameborder="0"></iframe>-->
+<br/>
+</body>
+</html>
