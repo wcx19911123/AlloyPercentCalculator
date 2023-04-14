@@ -4,6 +4,17 @@ const ELEMENTS = 'Cu,铜;Ag,银;Ni,镍;Ge,锗';
 const NUMBER_REG = /^\d+(\.\d+)?$/;
 const UNKNOWS = 'xyzuvw';
 const URL = `https://zh.numberempire.com/equationsolver.php`;
+const DESCRIPTION = [
+    ['目前只支持锡原料和其他合金半成品（如铜合金、银合金）的配比计算；暂不支持半成品、成品（如上次多余的成品）和其他合金半成品的配比计算。',],
+    ['操作流程：', [
+        ['填锡锭<r>原材料</r>重量；',],
+        ['矩形框里填<r>成品</r>的元素占比；填好之后可以点 <b>保存规格</b>，取个名字点确定，之后可以在 <b>成品规格</b> 里选名字自动带出元素占比；',],
+        ['下面填各个锡包合金（<r>半成品</r>）的元素占比，填锡以外的元素的占比；',],
+        ['点 <b>计算配比</b>，会在弹出的页面显示各个锡包合金需要加多少重量；弹出页面从左到右的数字，对应这个页面从上到下的元素。',],
+    ]],
+    ['每次填好的数字，下次打开页面会自动带出，不需要重新填写。'],
+    [''],
+];
 var SECTIONS;
 
 function set(k, v) {
@@ -25,14 +36,14 @@ function initInput() {
             `<tr>
                 <td>${name}合金占比：</td>
                 <td>
-                    <input name="${code}Percent" onblur="saveInput(this)" type="number"/> %
+                    <input name="${code}Percent" onblur="saveInput(this)" type="number" placeholder="填【半成品】的元素占比"/> %
                 </td>
             </tr>`;
         document.querySelector('tr#elementTr').outerHTML +=
             `<tr>
-                <td>${name}元素占比：</td>
-                <td>
-                    <input name="${code}Element" onblur="saveInput(this)" type="number"/> %
+                <td class="l">${name}元素占比：</td>
+                <td class="r">
+                    <input name="${code}Element" onblur="saveInput(this)" type="number" placeholder="填【成品】的元素占比"/> %
                 </td>
             </tr>`;
     });
@@ -41,7 +52,7 @@ function initInput() {
 function initSections() {
     SECTIONS = get('sections')
     if (!SECTIONS) {
-        SECTIONS = [{c: '', n: '请选择', v: null}];
+        SECTIONS = [{c: '', n: '请录入占比后点保存规格', v: null}];
         set('sections', JSON.stringify(SECTIONS));
     } else {
         SECTIONS = JSON.parse(SECTIONS);
@@ -62,10 +73,36 @@ function initValue(param) {
     todo.forEach(o => o.value = get(o.id || o.name) || '');
 }
 
+function initDescription(result, level, array, parent) {
+    if (!result && !level && !array && !parent) {
+        result = [];
+        level = 1;
+        array = DESCRIPTION;
+        parent = '';
+    }
+    for (let i = 0; i < array.length; i++) {
+        result.push(`<tr>
+<td ${level > 1 ? `class="p-l-${20 * (level - 1)}"` : ''}
+>${parent}${i + 1}.${array[i][0]
+            .replaceAll('<r>', '<font color="red">')
+            .replaceAll('</r>', '</font>')
+            .replaceAll('<b>', '<span style="border:black solid 1px">')
+            .replaceAll('</b>', '</span>')}</td></tr>`);
+        if (level >= 1 && array[i][1] && array[i][1].length > 0) {
+            initDescription(result, level + 1, array[i][1], `${parent}${i + 1}.`);
+        }
+    }
+    if (level <= 1) {
+        document.querySelector('table#description').innerHTML += result.join('');
+    }
+    return result;
+}
+
 function init() {
     initInput();
     initSections();
     initValue();
+    initDescription();
     document.getElementById('mainTable').classList.remove('hide');
 }
 
@@ -110,7 +147,7 @@ function getPercents() {
         }
         return a;
     }, {});
-    result.Other = +document.querySelector('input[name=OtherElement]').value;
+    // result.Other = +document.querySelector('input[name=OtherElement]').value;
     return result;
 }
 
@@ -168,7 +205,6 @@ function calculate() {
             alloys[i] = checkNumber(`input[name=${codes[i]}Percent]`, `${names[i]}合金占比`);
             alloys[i] = +(alloys[i] / 100).toFixed(6);
         }
-        console.log(Sn, elements, alloys);
         let equationSet = [], usedElements = [];
         for (let i = 0; i < codes.length; i++) {
             if (elements[i] <= 0) {
@@ -183,7 +219,6 @@ ${UNKNOWS[i]}`);
         let result = equationSet
             .map(o => o.replace('${usedElements}', usedElements.map(m => `+${m}`).join('')))
             .join(',');
-        // document.querySelector('iframe#iframe').src = `${URL}?function=${encodeURIComponent(result)}&var=${usedElements.join(',')}&result_type=true`;
         window.open(`${URL}?function=${encodeURIComponent(result)}&var=${usedElements.join(',')}&result_type=true`);
     } catch (e) {
         console.log(e);
