@@ -13,7 +13,7 @@ const DESCRIPTION = [
         ['点 <b>计算配比</b>，会在弹出的页面显示各个锡包合金需要加多少重量；弹出页面从左到右的数字，对应这个页面从上到下的元素。',],
     ]],
     ['每次填好的数字，下次打开页面会自动带出，不需要重新填写。'],
-    [''],
+    ['也可以填写<r>数字计算表达式</r>（支持 <b>+ - * / ( )</b> 这些符号），然后按回车键，会自动计算结果。'],
 ];
 var SECTIONS;
 
@@ -36,16 +36,32 @@ function initInput() {
             `<tr>
                 <td>${name}合金占比：</td>
                 <td>
-                    <input name="${code}Percent" onblur="saveInput(this)" type="number" placeholder="填【半成品】的元素占比"/> %
+                    <input name="${code}Percent" onblur="saveInput(this)" type="text" placeholder="填【半成品】的元素占比"/> %
                 </td>
             </tr>`;
         document.querySelector('tr#elementTr').outerHTML +=
             `<tr>
                 <td class="l">${name}元素占比：</td>
                 <td class="r">
-                    <input name="${code}Element" onblur="saveInput(this)" type="number" placeholder="填【成品】的元素占比"/> %
+                    <input name="${code}Element" onblur="saveInput(this)" type="text" placeholder="填【成品】的元素占比"/> %
                 </td>
             </tr>`;
+    });
+    [...document.querySelectorAll('input[type=text]')].forEach(o => {
+        o.addEventListener('keydown', o => {
+            if (o.keyCode !== 13) {
+                return;
+            }
+            let v;
+            try {
+                v = eval(o.target.value);
+            } catch (e) {
+                v = null;
+            }
+            if (v && !isNaN(+v)) {
+                o.target.value = +(+v).toFixed(6);
+            }
+        });
     });
 }
 
