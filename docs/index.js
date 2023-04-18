@@ -49,7 +49,6 @@ function initInput() {
     });
     [...document.querySelectorAll('input[type=text]')].forEach(o => {
         o.addEventListener('keydown', o => {
-            console.log(o.keyCode);
             if (o.keyCode !== 13) {
                 return;
             }
