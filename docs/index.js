@@ -1,6 +1,6 @@
 "use strict";
 const PREFIX = '__AlloyPercentCalculator_';
-const ELEMENTS = 'Cu,铜;Ag,银;Ni,镍;Ge,锗';
+const ELEMENTS = 'Cu,铜;Ag,银;Ni,镍;Ge,锗;Bi,铋';
 const NUMBER_REG = /^\d+(\.\d+)?$/;
 const UNKNOWS = 'xyzuvw';
 const URL = `https://zh.numberempire.com/equationsolver.php`;
