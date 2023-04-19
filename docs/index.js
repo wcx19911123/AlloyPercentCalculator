@@ -174,11 +174,19 @@ function initDescription(result, level, array, parent) {
     return result;
 }
 
+function initAuthor() {
+    let author = document.querySelector('span#author');
+    author.style.right = '0';
+    author.style.top = window.screen.availHeight + 'px';
+    author.style.display = '';
+}
+
 function init() {
     initInput();
     initSections();
     initValue();
     initDescription();
+    initAuthor();
     document.getElementById('mainTable').classList.remove('hide');
 }
 
