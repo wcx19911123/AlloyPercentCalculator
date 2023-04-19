@@ -1,9 +1,53 @@
 "use strict";
 const PREFIX = '__AlloyPercentCalculator_';
 const ELEMENTS = 'Cu,铜;Ag,银;Ni,镍;Ge,锗;Bi,铋';
+const DEFAULT_PERCENTS = [
+    {Cu: 0.6, Ag: 0, Ni: 0.02, Ge: 0, Bi: 0},
+    {Cu: 0.6, Ag: 0, Ni: 0.06, Ge: 0, Bi: 0},
+    {Cu: 0, Ag: 0, Ni: 0.02, Ge: 0, Bi: 0},
+    {Cu: 0, Ag: 0, Ni: 0.06, Ge: 0, Bi: 0},
+    {Cu: 0, Ag: 0.3, Ni: 0, Ge: 0, Bi: 0},
+    {Cu: 0, Ag: 0.3, Ni: 0, Ge: 0, Bi: 0.1},
+    {Cu: 0.6, Ag: 0.3, Ni: 0, Ge: 0, Bi: 0},
+    {Cu: 0.6, Ag: 0.3, Ni: 0, Ge: 0, Bi: 0.1},
+    {Cu: 0.5, Ag: 3, Ni: 0, Ge: 0, Bi: 0},
+    {Cu: 0, Ag: 3, Ni: 0.06, Ge: 0, Bi: 0},
+].map(o => ({
+    c: ELEMENTS
+        .split(';')
+        .map(p => p.split(',')[0])
+        .map(p => o[p] ? p + o[p] : '')
+        .join(''),
+    v: o,
+})).map(o => (o.n = o.c) && o);
+DEFAULT_PERCENTS.unshift({c: "", n: "请录入占比后点保存规格", v: null})
 const NUMBER_REG = /^\d+(\.\d+)?$/;
 const UNKNOWS = 'xyzuvw';
-const URL = `https://zh.numberempire.com/equationsolver.php`;
+const URL_CONFIG = {
+    'MICROSOFT': {
+        '{': '`left. `begin{cases} {',
+        '}': '} `end{cases} `right.',
+        '(': '`left(',
+        ')': '`right)',
+        '\n': '} `` {',
+        'url': 'https://mathsolver.microsoft.com/zh/solve-problem/',
+        'toUrlParams': function (list) {
+            return `${URL_CONFIG.MICROSOFT.url}${URL_CONFIG.MICROSOFT["{"]} \
+${list.map(o => o
+                .replace('(', URL_CONFIG.MICROSOFT["("])
+                .replace(')', URL_CONFIG.MICROSOFT[")"]))
+                .join(` ${URL_CONFIG.MICROSOFT["\n"]} `)} \
+${URL_CONFIG.MICROSOFT["}"]}`;
+        },
+    },
+    'NUMBER_EMPIRE': {
+        'url': 'https://zh.numberempire.com/equationsolver.php',
+        'toUrlParams': function (list, usedElements) {
+            return `${URL_CONFIG.NUMBER_EMPIRE.url}?function=\
+${encodeURIComponent(list.join(','))}&var=${usedElements.join(',')}&result_type=true`;
+        }
+    },
+};
 const DESCRIPTION = [
     ['目前只支持锡原料和其他合金半成品（如铜合金、银合金）的配比计算；暂不支持半成品、成品（如上次多余的成品）和其他合金半成品的配比计算。',],
     ['操作流程：', [
@@ -14,6 +58,7 @@ const DESCRIPTION = [
     ]],
     ['每次填好的数字，下次打开页面会自动带出，不需要重新填写。'],
     ['也可以填写<r>数字计算表达式</r>（支持 <b>+ - * / ( )</b> 这些符号），然后按回车键，会自动计算结果。'],
+    ['<b>计算配比</b> 右边可以选择不同的页面计算（如果某个页面打不开请试下其他的）'],
 ];
 var SECTIONS;
 
@@ -76,10 +121,17 @@ function calculateInput(element) {
 function initSections() {
     SECTIONS = get('sections')
     if (!SECTIONS) {
-        SECTIONS = [{c: '', n: '请录入占比后点保存规格', v: null}];
+        SECTIONS = JSON.parse(JSON.stringify(DEFAULT_PERCENTS));
         set('sections', JSON.stringify(SECTIONS));
     } else {
         SECTIONS = JSON.parse(SECTIONS);
+        for (let i = 1; i < DEFAULT_PERCENTS.length; i++) {
+            let idx = SECTIONS.findIndex(o => o.n === DEFAULT_PERCENTS[i].n);
+            if (idx > -1) {
+                SECTIONS.splice(idx, 1);
+            }
+            SECTIONS.splice(i, 0, DEFAULT_PERCENTS[i]);
+        }
     }
     document.querySelector('select#selectAlloy').innerHTML =
         SECTIONS.reduce((a, b) => a + `<option value="${b.c}">${b.n}</option>`, '');
@@ -141,7 +193,12 @@ function saveAlloy() {
         alert('请输入名称！');
         return false;
     }
-    let idx = SECTIONS.findIndex(o => o.n === name);
+    let idx = DEFAULT_PERCENTS.findIndex(o => o.n === name);
+    if (idx > -1) {
+        alert(`默认规格【${name}】不能更新！`);
+        return false;
+    }
+    idx = SECTIONS.findIndex(o => o.n === name);
     if (idx > -1 && !confirm(`已存在名为【${name}】的成品规格，是否更新？`)) {
         return false;
     }
@@ -179,6 +236,10 @@ function deleteAlloy() {
     let name = document.querySelector('select#selectAlloy')?.value;
     if (!name) {
         alert('请先选择一个成品规格再进行删除！');
+        return false;
+    }
+    if (DEFAULT_PERCENTS.findIndex(o => o.n === name) > -1) {
+        alert(`默认规格【${name}】不能删除！`)
         return false;
     }
     if (!confirm(`确定删除名为【${name}】的成品规格？`)) {
@@ -240,10 +301,9 @@ ${elements[i]}=\
 ${alloys[i]}*\
 ${UNKNOWS[i]}`);
         }
-        let result = equationSet
-            .map(o => o.replace('${usedElements}', usedElements.map(m => `+${m}`).join('')))
-            .join(',');
-        let url = `${URL}?function=${encodeURIComponent(result)}&var=${usedElements.join(',')}&result_type=true`;
+        let list = equationSet.map(o => o.replace('${usedElements}', usedElements.map(m => `+${m}`).join('')));
+        let type = document.querySelector('select#calculateType')?.value || 'NUMBER_EMPIRE';
+        let url = URL_CONFIG[type].toUrlParams(list, usedElements);
         window.open(url);
     } catch (e) {
         console.log(e);

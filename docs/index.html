@@ -37,6 +37,12 @@
         <td>
             <input type="button" value="计算配比" onclick="calculate()">
         </td>
+        <td>
+            <select id="calculateType" onchange="saveInput(this);">
+                <option value="NUMBER_EMPIRE">数字帝国</option>
+                <option value="MICROSOFT">微软计算器</option>
+            </select>
+        </td>
     </tr>
 </table>
 <table id="description" class="m-auto">
