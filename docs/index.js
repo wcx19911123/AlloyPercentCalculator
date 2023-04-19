@@ -26,6 +26,7 @@ function get(k) {
 }
 
 function saveInput(obj) {
+    calculateInput(obj);
     set(obj.id || obj.name, obj.value);
 }
 
@@ -52,17 +53,24 @@ function initInput() {
             if (o.keyCode !== 13) {
                 return;
             }
-            let v;
-            try {
-                v = eval(o.target.value);
-            } catch (e) {
-                v = null;
-            }
-            if (v && !isNaN(+v)) {
-                o.target.value = +(+v).toFixed(6);
-            }
+            calculateInput(o.target);
         });
     });
+}
+
+function calculateInput(element) {
+    if (element.type !== 'text') {
+        return;
+    }
+    let v;
+    try {
+        v = eval(element.value);
+    } catch (e) {
+        v = null;
+    }
+    if (v && !isNaN(+v)) {
+        element.value = +(+v).toFixed(6);
+    }
 }
 
 function initSections() {
@@ -235,7 +243,8 @@ ${UNKNOWS[i]}`);
         let result = equationSet
             .map(o => o.replace('${usedElements}', usedElements.map(m => `+${m}`).join('')))
             .join(',');
-        window.open(`${URL}?function=${encodeURIComponent(result)}&var=${usedElements.join(',')}&result_type=true`);
+        let url = `${URL}?function=${encodeURIComponent(result)}&var=${usedElements.join(',')}&result_type=true`;
+        window.open(url);
     } catch (e) {
         console.log(e);
         return false;
