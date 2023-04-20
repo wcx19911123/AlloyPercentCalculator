@@ -49,9 +49,9 @@ ${encodeURIComponent(list.join(','))}&var=${usedElements.join(',')}&result_type=
     },
 };
 const DESCRIPTION = [
-    ['目前只支持锡原料和其他合金半成品（如铜合金、银合金）的配比计算；暂不支持半成品、成品（如上次多余的成品）和其他合金半成品的配比计算。',],
+    ['支持锡原料和其他合金半成品（如铜合金、银合金）的配比计算；支持半成品、成品（如上次多余的成品）和其他合金半成品的配比计算。',],
     ['操作流程：', [
-        ['填锡锭<r>原材料</r>重量；',],
+        ['填写<r>原材料</r>重量；如果是锡原料，其他元素占比填0；如果是成品、半成品，按实际情况填其他元素占比即可；',],
         ['矩形框里填<r>成品</r>的元素占比；填好之后可以点 <b>保存规格</b>，取个名字点确定，之后可以在 <b>成品规格</b> 里选名字自动带出元素占比；',],
         ['下面填各个锡包合金（<r>半成品</r>）的元素占比，填锡以外的元素的占比；',],
         ['点 <b>计算配比</b>，会在弹出的页面显示各个锡包合金需要加多少重量；弹出页面从左到右的数字，对应这个页面从上到下的元素。',],
@@ -76,12 +76,20 @@ function saveInput(obj) {
 }
 
 function initInput() {
-    ELEMENTS.split(';').reverse().forEach(o => {
+    let list = ELEMENTS.split(';');
+    list.reverse().forEach((o, i) => {
         let [code, name] = o.split(',');
+        document.querySelector('tr#originTr').outerHTML +=
+            `<tr>
+                <td class="l${i ? '' : ' b'}">${name}元素占比：</td>
+                <td class="r${i ? '' : ' b'}">
+                    <input name="${code}Origin" onblur="saveInput(this)" type="text" placeholder="填【原料】的元素占比"/> %
+                </td>
+            </tr>`;
         document.querySelector('tr#alloyTr').outerHTML +=
             `<tr>
-                <td>${name}合金占比：</td>
-                <td>
+                <td class="l${i === list.length - 1 ? ' t' : ''}">${name}合金占比：</td>
+                <td class="r${i === list.length - 1 ? ' t' : ''}">
                     <input name="${code}Percent" onblur="saveInput(this)" type="text" placeholder="填【半成品】的元素占比"/> %
                 </td>
             </tr>`;
@@ -287,13 +295,16 @@ function showPercents(select) {
 
 function calculate() {
     try {
-        let Sn = checkNumber('input[name=SnElement]', '锡锭原材料');
+        let origin = checkNumber('input[name=SnElement]', '原材料重量');
         let elements = ELEMENTS.split(';');
-        let alloys = JSON.parse(JSON.stringify(elements));
+        let origins = [];
+        let alloys = [];
         let codes = elements.map(o => o.split(',')[0]);
         let names = elements.map(o => o.split(',')[1]);
         for (let i = 0; i < codes.length; i++) {
-            elements[i] = checkNumber(`input[name=${codes[i]}Element]`, `${names[i]}元素占比`);
+            origins[i] = checkNumber(`input[name=${codes[i]}Origin]`, `原料${names[i]}元素占比`);
+            origins[i] = +(origins[i] / 100).toFixed(6);
+            elements[i] = checkNumber(`input[name=${codes[i]}Element]`, `成品${names[i]}元素占比`);
             elements[i] = +(elements[i] / 100).toFixed(6);
             alloys[i] = checkNumber(`input[name=${codes[i]}Percent]`, `${names[i]}合金占比`);
             alloys[i] = +(alloys[i] / 100).toFixed(6);
@@ -304,10 +315,11 @@ function calculate() {
                 continue;
             }
             usedElements.push(UNKNOWS[i]);
-            equationSet.push(`(${Sn}\${usedElements})*\
+            equationSet.push(`(${origin}\${usedElements})*\
 ${elements[i]}=\
 ${alloys[i]}*\
-${UNKNOWS[i]}`);
+${UNKNOWS[i]}\
+${origins[i] > 0 ? `+${origin}*${origins[i]}` : ''}`);
         }
         let list = equationSet.map(o => o.replace('${usedElements}', usedElements.map(m => `+${m}`).join('')));
         let type = document.querySelector('select#calculateType')?.value || 'NUMBER_EMPIRE';

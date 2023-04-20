@@ -9,11 +9,16 @@
 <body style="position: relative;">
 <table id="mainTable" class="m-auto hide" cellspacing="0">
     <tr>
-        <td colspan="2"><h3 class="m-b-0">配料设置</h3></td>
+        <td colspan="2"><h3 class="m-b-0">原料设置</h3></td>
+    </tr>
+    <tr id="originTr">
+        <td class="t l">原材料重量：</td>
+        <td class="t r">
+            <input name="SnElement" onblur="saveInput(this)" type="text" placeholder="填写【原材料】的总重量"/> kg
+        </td>
     </tr>
     <tr>
-        <td>锡锭原材料：</td>
-        <td><input name="SnElement" onblur="saveInput(this)" type="text" placeholder="填锡【原材料】的重量"/> kg</td>
+        <td colspan="2"><h3 class="m-b-0">成品设置</h3></td>
     </tr>
     <tr id="elementTr">
         <td class="t l">成品规格：</td>
@@ -34,10 +39,10 @@
         <td colspan="2"><h3 class="m-b-0">锡包合金设置</h3></td>
     </tr>
     <tr>
-        <td>
+        <td class="l b">
             <input type="button" value="计算配比" onclick="calculate()">
         </td>
-        <td>
+        <td class="r b">
             <select id="calculateType" onchange="saveInput(this);">
                 <option value="NUMBER_EMPIRE">数字帝国</option>
                 <option value="MICROSOFT">微软计算器</option>
