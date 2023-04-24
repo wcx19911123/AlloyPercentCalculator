@@ -1,5 +1,4 @@
 "use strict";
-const PREFIX = '__AlloyPercentCalculator_';
 const ELEMENTS = 'Cu,铜;Ag,银;Ni,镍;Ge,锗;Bi,铋';
 const DEFAULT_PERCENTS = [
     {Cu: 0.6, Ag: 0, Ni: 0.02, Ge: 0, Bi: 0},
@@ -20,9 +19,7 @@ const DEFAULT_PERCENTS = [
         .join(''),
     v: o,
 })).map(o => (o.n = o.c) && o);
-DEFAULT_PERCENTS.unshift({c: "", n: "请录入占比后点保存规格", v: null})
-const NUMBER_REG = /^\d+(\.\d+)?$/;
-const UNKNOWS = 'xyzuvw';
+DEFAULT_PERCENTS.unshift({c: "", n: "请录入占比后点保存规格", v: null});
 const URL_CONFIG = {
     'MICROSOFT': {
         '{': '`left. `begin{cases} {',
@@ -52,6 +49,7 @@ const DESCRIPTION = [
     ['支持锡原料和其他合金半成品（如铜合金、银合金）的配比计算；支持半成品、成品（如上次多余的成品）和其他合金半成品的配比计算。',],
     ['操作流程：', [
         ['填写<r>原材料</r>重量；如果是锡原料，其他元素占比填0；如果是成品、半成品，按实际情况填其他元素占比即可；',],
+        ['如果有<r>多种</r>原材料，点击原料设置后面的<b> + </b>，增加原材料；如果需要删除某个原材料，选中想删除的原材料，点右上角的<b> × </b>；',],
         ['矩形框里填<r>成品</r>的元素占比；填好之后可以点 <b>保存规格</b>，取个名字点确定，之后可以在 <b>成品规格</b> 里选名字自动带出元素占比；',],
         ['下面填各个锡包合金（<r>半成品</r>）的元素占比，填锡以外的元素的占比；',],
         ['点 <b>计算配比</b>，会在弹出的页面显示各个锡包合金需要加多少重量；弹出页面从左到右的数字，对应这个页面从上到下的元素。',],
@@ -60,7 +58,11 @@ const DESCRIPTION = [
     ['也可以填写<r>数字计算表达式</r>（支持 <b>+ - * / ( )</b> 这些符号），然后按回车键，会自动计算结果。'],
     ['<b>计算配比</b> 右边可以选择不同的页面计算（如果某个页面打不开请试下其他的）'],
 ];
-var SECTIONS;
+const LOG_DAYS = 14 * 24 * 60 * 60 * 1000;
+const PREFIX = '__AlloyPercentCalculator_';
+const NUMBER_REG = /^\d+(\.\d+)?$/;
+const UNKNOWS = 'xyzuvw';
+var SECTIONS, CURR_TAB, ORIGINS;
 
 function set(k, v) {
     localStorage.setItem(PREFIX + k, v);
@@ -70,9 +72,84 @@ function get(k) {
     return localStorage.getItem(PREFIX + k);
 }
 
+function round(number, length) {
+    return +(number / 1).toFixed(length || 8);
+}
+
 function saveInput(obj) {
     calculateInput(obj);
-    set(obj.id || obj.name, obj.value);
+    if (obj.classList.contains('followTab')) {
+        let element = obj.name.substr(0, 2);
+        let currTab = +obj.name.match(/\d+$/)[0];
+        ORIGINS[currTab - 1][element] = obj.value;
+        set('ORIGINS', JSON.stringify(ORIGINS));
+    } else {
+        set(obj.name || obj.id, obj.value);
+    }
+}
+
+function initTabs() {
+    let elements = ELEMENTS.split(';').map(o => o.split(',')[0]);
+    ORIGINS = get('ORIGINS');
+    if (!ORIGINS) {
+        ORIGINS = [elements.reduce((a, b) => (a[b] = null) || a, {})];
+        set('ORIGINS', JSON.stringify(ORIGINS));
+    } else {
+        ORIGINS = JSON.parse(ORIGINS);
+    }
+    CURR_TAB = get('CURR_TAB');
+    CURR_TAB = !CURR_TAB ? 1 : +CURR_TAB;
+    set('CURR_TAB', CURR_TAB);
+    [...document.querySelectorAll('input.followTab')].forEach(o => o.name = `${o.id}_${CURR_TAB}`);
+    document.querySelector('td#choose').innerHTML = '';
+    for (let i = 0; i < ORIGINS.length + 2; i++) {
+        addTab(i + 1);
+    }
+}
+
+function addTab(i) {
+    let td = document.querySelector('td#choose');
+    td.innerHTML += `<a href="javascript:void(0);" class="${i === CURR_TAB ? 'choose' : ''}" \
+style="float:${i >= ORIGINS.length + 2 ? 'right' : 'left'}" \
+onmouseover="tabOver(this,true)" onmouseout="tabOver(this,false)" onclick="tabClick(this)">\
+${i <= ORIGINS.length ? i : i > ORIGINS.length + 1 ? '×' : '+'}</a>`;
+}
+
+function tabOver(obj, In) {
+    if (In) {
+        obj.classList.add('over');
+    } else {
+        obj.classList.remove('over');
+    }
+}
+
+function tabClick(obj) {
+    let type = obj.innerHTML;
+    switch (type) {
+        case'+':
+            let elements = ELEMENTS.split(';').map(o => o.split(',')[0]);
+            ORIGINS.push(elements.reduce((a, b) => (a[b] = null) || a, {}));
+            set('ORIGINS', JSON.stringify(ORIGINS));
+            set('CURR_TAB', ORIGINS.length);
+            break;
+        case'×':
+            if (ORIGINS.length <= 1) {
+                alert('最后一组原料设置不能删除！');
+                return false;
+            }
+            if (!confirm(`确定删除第 ${CURR_TAB} 组原料设置？`)) {
+                return true;
+            }
+            ORIGINS.splice(CURR_TAB - 1, 1);
+            set('ORIGINS', JSON.stringify(ORIGINS));
+            set('CURR_TAB', Math.min(CURR_TAB, ORIGINS.length));
+            break;
+        default:
+            set('CURR_TAB', +type);
+            break;
+    }
+    initTabs();
+    initValue('tabOnly');
 }
 
 function initInput() {
@@ -81,9 +158,10 @@ function initInput() {
         let [code, name] = o.split(',');
         document.querySelector('tr#originTr').outerHTML +=
             `<tr>
-                <td class="l${i ? '' : ' b'}">${name}元素占比：</td>
+                <td class="l${i ? '' : ' b'}">${name}元素含量：</td>
                 <td class="r${i ? '' : ' b'}">
-                    <input name="${code}Origin" onblur="saveInput(this)" type="text" placeholder="填【原料】的元素占比"/> %
+                    <input name="${code}Origin_${CURR_TAB}" id="${code}Origin" class="followTab" onblur="saveInput(this)" 
+                    type="text" placeholder="填【原料】的元素含量"/> Kg
                 </td>
             </tr>`;
         document.querySelector('tr#alloyTr').outerHTML +=
@@ -122,7 +200,7 @@ function calculateInput(element) {
         v = null;
     }
     if (v && !isNaN(+v)) {
-        element.value = +(+v).toFixed(6);
+        element.value = round(v);
     }
 }
 
@@ -151,10 +229,20 @@ function initValue(param) {
     let todo;
     if (param === 'selectOnly') {
         todo = [...selects];
+    } else if (param === 'tabOnly') {
+        todo = [...inputs].filter(o => o.classList.contains('followTab'));
     } else {
         todo = [...inputs, ...selects];
     }
-    todo.forEach(o => o.value = get(o.id || o.name) || '');
+    todo.forEach(o => {
+        if (o.classList.contains('followTab')) {
+            let element = o.name.substr(0, 2);
+            let currTab = +o.name.match(/\d+$/)[0];
+            o.value = ORIGINS?.[currTab - 1]?.[element] || '';
+        } else {
+            o.value = get(o.name || o.id) || '';
+        }
+    });
 }
 
 function initDescription(result, level, array, parent) {
@@ -190,6 +278,7 @@ function initAuthor() {
 }
 
 function init() {
+    initTabs();
     initInput();
     initSections();
     initValue();
@@ -244,7 +333,6 @@ function getPercents() {
         }
         return a;
     }, {});
-    // result.Other = +document.querySelector('input[name=OtherElement]').value;
     return result;
 }
 
@@ -295,19 +383,23 @@ function showPercents(select) {
 
 function calculate() {
     try {
-        let origin = checkNumber('input[name=SnElement]', '原材料重量');
+        let origin = 0, origins = [];
+        for (let i = 0; i < ORIGINS.length; i++) {
+            origin += checkNumberTab('Sn', '原材料重量', i);
+        }
         let elements = ELEMENTS.split(';');
-        let origins = [];
         let alloys = [];
         let codes = elements.map(o => o.split(',')[0]);
         let names = elements.map(o => o.split(',')[1]);
         for (let i = 0; i < codes.length; i++) {
-            origins[i] = checkNumber(`input[name=${codes[i]}Origin]`, `原料${names[i]}元素占比`);
-            origins[i] = +(origins[i] / 100).toFixed(6);
+            origins[i] = 0;
+            for (let j = 0; j < ORIGINS.length; j++) {
+                origins[i] += checkNumberTab(codes[i], `原料${names[i]}元素含量`, j);
+            }
             elements[i] = checkNumber(`input[name=${codes[i]}Element]`, `成品${names[i]}元素占比`);
-            elements[i] = +(elements[i] / 100).toFixed(6);
+            elements[i] = round(elements[i] / 100);
             alloys[i] = checkNumber(`input[name=${codes[i]}Percent]`, `${names[i]}合金占比`);
-            alloys[i] = +(alloys[i] / 100).toFixed(6);
+            alloys[i] = round(alloys[i] / 100);
         }
         let equationSet = [], usedElements = [];
         for (let i = 0; i < codes.length; i++) {
@@ -319,11 +411,12 @@ function calculate() {
 ${elements[i]}=\
 ${alloys[i]}*\
 ${UNKNOWS[i]}\
-${origins[i] > 0 ? `+${origin}*${origins[i]}` : ''}`);
+${origins[i] > 0 ? `+${origins[i]}` : ''}`);
         }
         let list = equationSet.map(o => o.replace('${usedElements}', usedElements.map(m => `+${m}`).join('')));
         let type = document.querySelector('select#calculateType')?.value || 'NUMBER_EMPIRE';
         let url = URL_CONFIG[type].toUrlParams(list, usedElements);
+        saveLog(list);
         window.open(url);
     } catch (e) {
         console.log(e);
@@ -341,4 +434,48 @@ function checkNumber(selector, name) {
         throw new Error(`Number format error for element {selector: '${selector}', name: '${name}'}`);
     }
     return +value;
+}
+
+function checkNumberTab(element, name, i) {
+    let value = ORIGINS[i]?.[element];
+    if (value == null || !value.match(NUMBER_REG)) {
+        alert(`第 ${+i + 1} 页${name}填写不正确，需填写数字！`);
+        let aList = document.querySelectorAll('#choose a');
+        let a = [...aList].filter(o => o.innerHTML.trim() === '' + (i + 1))?.[0];
+        if (a) {
+            a.click();
+            setTimeout(function () {
+                let obj = document.querySelector(`input#${element}Origin`);
+                obj?.focus();
+                obj?.select();
+            }, 0);
+        }
+        throw new Error(`Number format error for element tab {element: '${element}', name: '${name}', i: ${i}}`);
+    }
+    return +value;
+}
+
+function saveLog(list) {
+    let log = get('Log');
+    if (!log) {
+        log = [];
+    } else {
+        log = JSON.parse(log);
+    }
+    let now = new Date().getTime();
+    log = log.filter(o => o[0] >= now - LOG_DAYS);
+    log.push([now, list.join(';')]);
+    log = log.sort((a, b) => a[0] - b[0]);
+    set('Log', JSON.stringify(log));
+}
+
+function showLog() {
+    let log = get('Log');
+    if (!log) {
+        log = [];
+    } else {
+        log = JSON.parse(log);
+    }
+    log.map(o => (o[0] = new Date(o[0])) && o);
+    console.log(log);
 }

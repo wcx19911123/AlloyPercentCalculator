@@ -43,3 +43,20 @@ td.r {
 td.b {
     border-bottom: gray solid 2px;
 }
+
+#choose a {
+    border: 2px solid gray;
+    padding: 0 10px;
+    margin-bottom: -3px;
+    border-radius: 40% 40% 0 0;
+    text-decoration: none;
+    color: black;
+}
+
+#choose a.choose {
+    background-color: darkgray;
+}
+
+#choose a.over {
+    background-color: gray;
+}
