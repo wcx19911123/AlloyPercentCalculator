@@ -277,6 +277,16 @@ function initAuthor() {
     author.style.display = '';
 }
 
+function initLogo() {
+    let screenWidth = document.body.clientWidth;
+    let logoWidth = ((screenWidth - 300) / 2) * 0.6;
+    let logoLeft = ((screenWidth - 300) / 2) * 0.2;
+    let logo = document.getElementById('logo');
+    logo.style.width = `${logoWidth}px`;
+    logo.style.left = `${logoLeft}px`;
+    logo.style.display = '';
+}
+
 function init() {
     initTabs();
     initInput();
@@ -284,6 +294,7 @@ function init() {
     initValue();
     initDescription();
     initAuthor();
+    initLogo();
     document.getElementById('mainTable').classList.remove('hide');
 }
 
