@@ -273,7 +273,7 @@ function initDescription(result, level, array, parent) {
 function initAuthor() {
     let author = document.querySelector('span#author');
     author.style.right = '0';
-    author.style.top = window.screen.availHeight + 'px';
+    author.style.top = window.screen.height + 'px';
     author.style.display = '';
 }
 
