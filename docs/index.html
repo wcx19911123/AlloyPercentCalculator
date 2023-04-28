@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <title>博士达合金成分配比计算器</title>
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <script src="https://momentjs.com/downloads/moment.min.js"></script>
     <script src="index.js"></script>
     <link href="index.css" rel="stylesheet" type="text/css">
 </head>
@@ -53,6 +55,11 @@
                 <option value="NUMBER_EMPIRE">数字帝国</option>
                 <option value="MICROSOFT">微软计算器</option>
             </select>
+        </td>
+    </tr>
+    <tr>
+        <td colspan="2" style="text-align: center;">
+            <input type="button" value="导出历史" onclick="showLog()">
         </td>
     </tr>
 </table>

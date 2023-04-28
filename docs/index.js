@@ -466,21 +466,38 @@ function checkNumberTab(element, name, i) {
     return +value;
 }
 
-function saveLog(list) {
+function saveLog(equations) {
     let log = get('Log');
     if (!log) {
         log = [];
     } else {
         log = JSON.parse(log);
     }
+    let list = ELEMENTS.split(';').map(o => o.split(',')[0]);
+    let obj = {
+        origins: ORIGINS,
+        elements: list.reduce((a, b) => {
+            a[b] = +document.querySelector(`input[name=${b}Element]`)?.value || 0;
+            return a;
+        }, {}),
+        percents: list.reduce((a, b) => {
+            a[b] = +document.querySelector(`input[name=${b}Percent]`)?.value || 0;
+            return a;
+        }, {}),
+        type: document.querySelector('#calculateType').value,
+        equations: equations.join(';'),
+    };
     let now = new Date().getTime();
     log = log.filter(o => o[0] >= now - LOG_DAYS);
-    log.push([now, list.join(';')]);
+    log.push([now, JSON.stringify(obj)]);
     log = log.sort((a, b) => a[0] - b[0]);
     set('Log', JSON.stringify(log));
 }
 
 function showLog() {
+    if (!confirm('将导出近期计算历史记录到Excel文件，是否导出？')) {
+        return;
+    }
     let log = get('Log');
     if (!log) {
         log = [];
@@ -488,5 +505,27 @@ function showLog() {
         log = JSON.parse(log);
     }
     log.map(o => (o[0] = new Date(o[0])) && o);
-    console.log(log);
+    log = log.filter(o => o[1].indexOf('equations') > -1);
+    log = log.map(o => {
+        let data = JSON.parse(o[1]);
+        let result = {};
+        result['时间'] = o[0];
+        result['原材料设置'] = JSON.stringify(data.origins);
+        result['成品设置'] = JSON.stringify(data.elements);
+        result['锡包合金设置'] = JSON.stringify(data.percents);
+        result['计算方法'] = data.type;
+        result['方程式'] = data.equations;
+        return result;
+    });
+    let workSheet = XLSX.utils.json_to_sheet(log);
+    workSheet["!cols"] = [{wch: 20}, {wch: 30}, {wch: 30}, {wch: 30}, {wch: 20}, {wch: 30}];
+    let workBook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workBook, workSheet, "Sheet1");
+    for (let k in workBook.Sheets.Sheet1) {
+        if (/A[0-9]+/.test(k) && +k.match(/\d+/) > 1) {
+            workBook.Sheets.Sheet1[k].z = 'yyyy-mm-dd hh:mm:ss';
+        }
+    }
+    let now = moment().format('YYYY-MM-DD HH:mm:ss');
+    XLSX.writeFile(workBook, '合金成分计算器日志' + now + '.xlsx');
 }
