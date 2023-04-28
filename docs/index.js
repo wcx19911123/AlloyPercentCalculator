@@ -398,6 +398,7 @@ function calculate() {
         for (let i = 0; i < ORIGINS.length; i++) {
             origin += checkNumberTab('Sn', '原材料重量', i);
         }
+        origin = round(origin);
         let elements = ELEMENTS.split(';');
         let alloys = [];
         let codes = elements.map(o => o.split(',')[0]);
@@ -407,6 +408,7 @@ function calculate() {
             for (let j = 0; j < ORIGINS.length; j++) {
                 origins[i] += checkNumberTab(codes[i], `原料${names[i]}元素含量`, j);
             }
+            origins[i] = round(origins[i]);
             elements[i] = checkNumber(`input[name=${codes[i]}Element]`, `成品${names[i]}元素占比`);
             elements[i] = round(elements[i] / 100);
             alloys[i] = checkNumber(`input[name=${codes[i]}Percent]`, `${names[i]}合金占比`);
